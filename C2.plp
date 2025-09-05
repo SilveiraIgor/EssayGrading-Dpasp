@@ -1,7 +1,7 @@
 #python
 import torch
 from datasets import load_dataset
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import AutomodelForSequenceClassification, AutoTokenizer
 
 # Return an instance of Net.
 def digit_net_1(): return AutoModelForSequenceClassification.from_pretrained("igorcs/Syntax-A", cache_dir="/tmp/aes_enem2", num_labels=5)
@@ -9,18 +9,17 @@ def digit_net_2(): return AutoModelForSequenceClassification.from_pretrained("ig
 
 # Retrieve the MNIST data.
 def mnist_data():
-  train = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['train']
+  train = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['train]
   test  = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['test']
   return train, test
 
 def normalize(train, test):
   TOKENIZER_NAME = f"neuralmind/bert-base-portuguese-cased"
   tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
-  novo_train = tokenizer(train['essay_text'], return_tensors="pt", truncation=True, padding="max_length", max_length=512)
+  novo_train = tokenizer(train['essay-text'], return_tensors="pt", truncation=True, padding="max_length", max_length=512)
   respostas_train = train['grades'][0]//40
   return novo_train, respostas_train, novo_train, respostas_train
 
-train, test = mnist_data()
 train_X, train_Y, test_X, test_Y = normalize(train, test)
 
 # MNIST images for the train set.
@@ -41,28 +40,26 @@ input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 
 % Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::syntax(0, {0,1,2,3,4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(0).
-%?::mistakes(0, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(0).
+%?::syntax(0, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(0).
+syntax(0, 0) :- input(0).
+?::mistakes(0, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(0).
 % The sum.
-teste.
-syntax(X) :- true.
-mistakes(X) :- true.
 nota(0) :- syntax(0).
-nota(1) :- syntax(1), mistakes(0).
+nota(1) :- syntax(1), mystakes(0).
 %dois casos de nota 2
-nota(2) :- syntax(1), mistakes(b), b>=1.
-nota(2) :- syntax(a), mistakes(0), a>=2.
+nota(2) :- syntax(1), mystakes(b), b>=1.
+nota(2) :- syntax(a), mystakes(0), a>=2.
 %dois casos de nota 3
-nota(3) :- syntax(2), mistakes(b), b>=1.
-nota(3) :- syntax(a), mistakes(1), a>=2.
+nota(3) :- syntax(2), mystakes(b), b>=1.
+nota(3) :- syntax(a), mystakes(1), a>=2.
 %dois casos de nota 4
-nota(4) :- syntax(3), mistakes(b), b>=2.
-nota(4) :- syntax(a), mistakes(2), a>=3.
+nota(4) :- syntax(3), mystakes(b), b>=2.
+nota(4) :- syntax(a), mystakes(2), a>=3.
 %caso unico pra nota 5
-nota(5) :- syntax(4), mistakes(3).
+nota(5) :- syntax(4), mystakes(3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
 #learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 8.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
-#query nota(X).
+#query sum(X).
