@@ -1,0 +1,107 @@
+#python
+import torch
+from datasets import load_dataset
+import torch.nn as nn
+import torch.nn.functional as F
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+class MNISTNet(nn.Module):
+  def __init__(self, name, numero_labels):
+    super(MNISTNet, self).__init__()
+    self.rede = AutoModelForSequenceClassification.from_pretrained(
+                name,
+                cache_dir="/tmp/aes_enem2",
+                num_labels=numero_labels)
+    TOKENIZER_NAME = f"neuralmind/bert-base-portuguese-cased"
+    self.tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
+  def forward(self, x):
+    x = x.long()
+    #entrada = self.tokenizer(x, return_tensors="pt", truncation=True, padding="max_length", max_length=512)
+    #output1 = self.rede(input_ids=entrada[0], token_type_ids=entrada[1],  attention_mask=entrada[2])
+    print("Vou printar o formato do vetor que chegou no forward bert: ", x.shape, x.dtype)
+    decodado = self.tokenizer.batch_decode(x, skip_special_tokens=True)
+    for d in decodado:
+      print(">>O texto que chegou foi: ", d[:20])
+    output1 = self.rede(input_ids=x)
+    resposta = F.softmax(output1.logits, dim=1)
+    print("Logits do BERT: ", resposta)
+    return resposta
+
+def digit_net_1(): return MNISTNet("igorcs/Syntax-A", numero_labels=5)
+def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4)
+
+# Retrieve the MNIST data.
+def mnist_data():
+  train = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['train']
+  test  = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['test']
+  return train, test
+
+def normalize(train, test):
+  TOKENIZER_NAME = f"neuralmind/bert-base-portuguese-cased"
+  tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
+  lista_train = []
+  respostas_train = []
+  for linha in train:
+    respostas_train.append(linha['grades'][0]//40)
+  lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)#train['essay_text']
+  #print(lista_train['input_ids'])
+  lista_train = lista_train['input_ids']
+  print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
+  respostas_train = torch.tensor(respostas_train[:2], dtype=torch.int)
+  print("As respostas deveriam ser: ", respostas_train)
+  print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
+  return lista_train, respostas_train, lista_train, respostas_train
+
+train, test = mnist_data()
+train_X, train_Y, test_X, test_Y = normalize(train, test)
+
+# MNIST images for the train set.
+def mnist_images_train(i): return train_X
+# MNIST images for the test set.
+def mnist_images_test(i): return train_X
+
+# Observed atoms for training.
+def mnist_labels_train():
+  # We join the two halves (top and bottom) of MNIST and join them together to get
+  # two digits side by side. The labels are atoms encoding the sum of the two digits.
+  labels = train_Y
+  resposta = [[f"nota({y})"] for y in labels]
+  #resposta = [f"nota({y})" for y in labels]
+  print("No mnist_labels_train: ", resposta)
+  return resposta
+#end.
+
+% Data of the first digit.
+input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
+
+% Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
+% and a learning rate of 0.001.
+?::syntax(X, {0,1,2,3,4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::mistakes(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
+?::redondo(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
+% The sum
+nota(0) :- syntax(0,0).
+nota(1) :- syntax(0,1), mistakes(0,0).
+%dois casos de nota 2
+nota(2) :- syntax(0,1), mistakes(0,B), B>=1.
+nota(2) :- syntax(0,A), mistakes(0,0), A>=2.
+%dois casos de nota 3
+nota(3) :- syntax(0,2), mistakes(0,B), B>=1.
+nota(3) :- syntax(0,A), mistakes(0,1), A>=2.
+%dois casos de nota 4
+nota(4) :- syntax(0,3), mistakes(0,B), B>=2.
+nota(4) :- syntax(0,A), mistakes(0,2), A>=3.
+%caso unico pra nota 5
+nota(5) :- syntax(0,4), mistakes(0,3).
+
+% Learn the parameters of the program from the "sum(X)" atoms.
+#learn @mnist_labels_train, lr = 0.1, niters = 1, alg = "lagrange", batch = 1.
+#semantics maxent.
+% Ask for the probability of all groundings of sum(X).
+%#query nota(X).
+#query nota(0). 
+#query nota(1).
+#query nota(2).
+#query nota(3).
+#query nota(4).
+#query nota(5).

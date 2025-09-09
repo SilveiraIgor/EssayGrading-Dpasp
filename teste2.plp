@@ -1,0 +1,65 @@
+#python
+import torch
+import torchvision
+
+# The network that maps an image of a digit to a probability of whether it is even.
+def even_net(): return torch.nn.Sequential(
+    torch.nn.Flatten(),
+    torch.nn.Linear(28*28, 128),
+    torch.nn.ReLU(True),
+    torch.nn.Linear(128, 32),
+    torch.nn.ReLU(True),
+    torch.nn.Linear(32, 1),
+    torch.nn.Sigmoid(),
+  )
+
+# Retrieve the MNIST data.
+def mnist_data():
+  train = torchvision.datasets.MNIST(root = "/tmp", train = True, download = True)
+  test  = torchvision.datasets.MNIST(root = "/tmp", train = False, download = True)
+  return train.data.float().reshape(len(train), 1, 28, 28)/255., train.targets, \
+         test.data.float().reshape(len(test), 1, 28, 28)/255., test.targets
+
+# Normalization function to center pixel values around mu with standard deviation sigma.
+def normalize(X_R, Y_R, X_T, Y_T, mu, sigma):
+  return (X_R-mu)/sigma, Y_R, (X_T-mu)/sigma, Y_T
+
+train_X, train_Y, test_X, test_Y = normalize(*mnist_data(), 0.1307, 0.3081)
+# Whether to pick the first or second half of the dataset.
+def pick_slice(data, which):
+  h = len(data)//2
+  return slice(h, len(data)) if which else slice(0, h)
+# MNIST images for the train set.
+def mnist_images_train(which): return train_X[pick_slice(train_X, which)]
+# MNIST images for the test set.
+def mnist_images_test(which): return test_X[pick_slice(test_X, which)]
+# Observed atoms for training.
+def mnist_labels_train():
+  # We join the two halves (top and bottom) of MNIST and join them together to get
+  # two digits side by side. The labels are "even" if any one of the digits is even,
+  # odd otherwise.
+  labels = torch.concatenate((train_Y[:(h := len(train_Y)//2)].reshape(-1, 1),
+                              train_Y[h:].reshape(-1, 1)), axis=1)
+  return [["even" if x % 2 == 0 or y % 2 == 0 else "odd"] for x, y in labels]
+#end.
+
+% Data of the first digit.
+input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
+% Data of the second digit.
+input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
+
+% Neural rule describing whether image X is even.
+?::is_even(X) as @even_net :- input(X).
+% (i): the multiplication of two digits is even if any of the two digits is even.
+even :- is_even(0).
+even :- is_even(1).
+% (ii): it is odd otherwise.
+odd  :- not even.
+
+% Learn the parameters of the program from "even" and "odd" labels.
+#learn @mnist_labels_train, lr = 0.0001, niters = 5, alg = "lagrange", batch = 1000.
+% Ask for the probability of the product being even.
+#query teste.
+% Choose the maximum entropy semantics.
+#semantics maxent.
+
