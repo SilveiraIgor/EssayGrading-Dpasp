@@ -24,10 +24,12 @@ class Net(torch.nn.Module):
     )
 
   def forward(self, x):
-    print("Tamanho do x no forward: ", x.shape)
+    print("Formato que a rede recebeu: ", x.shape, x.ndim)
+    #print("Os dois primeiros elementos: ", x[:2][:10])
     x = self.encoder(x)
     x = x.view(-1, 16 * 4 * 4)
     x = self.classifier(x)
+    print("Formato da resposta da rede: ", x.shape, x.ndim)
     return x
 
 # Return an instance of Net.
@@ -47,27 +49,37 @@ def normalize(X_R, Y_R, X_T, Y_T, mu, sigma):
 train_X, train_Y, test_X, test_Y = normalize(*mnist_data(), 0.1307, 0.3081)
 train_X = train_X[:10]
 train_Y = train_Y[:10]
-test_X = test_X[:10]
-test_Y = test_Y[:10]
-print("Formato do train_X: ", train_X.shape)
-print("Formato do train_Y: ", train_Y.shape)
+test_X = test_X[:20]
+test_Y = test_Y[:20]
+print("Shape do train_X: ", train_X.shape)
+print("Shape do train_Y: ", train_Y.shape)
+print("Shape do test_X: ", test_X.shape)
+print("Shape do test_Y: ", test_Y.shape)
 # Whether to pick the first or second half of the dataset.
 def pick_slice(data, which):
   h = len(data)//2
   return slice(h, len(data)) if which else slice(0, h)
 # MNIST images for the train set.
-def mnist_images_train(which): return train_X[pick_slice(train_X, which)][:100]
+def mnist_images_train(which):
+  resposta =  train_X[pick_slice(train_X, which)]
+  print("No mnist_images_train, o tensor tem formato: ", resposta.shape)
+  #print(resposta[0][:10])
+  #print(resposta[1][:10])
+  return resposta
 # MNIST images for the test set.
-def mnist_images_test(which): return test_X[pick_slice(test_X, which)][:100]
+def mnist_images_test(which):
+  resposta = test_X[pick_slice(test_X, which)]
+  print("No mnist_images_test, o tensor tem tamanho: ", resposta.shape) 
+  return resposta
 # Observed atoms for training.
 def mnist_labels_train():
   # We join the two halves (top and bottom) of MNIST and join them together to get
   # two digits side by side. The labels are atoms encoding the sum of the two digits.
   labels = torch.concatenate((train_Y[:(h := len(train_Y)//2)].reshape(-1, 1),
-                              train_Y[h:].reshape(-1, 1)), axis=1) 
-  resposta = [[f"sum({x.item() + y.item()})"] for x, y in labels]
-  print("Respostas: ", resposta[:2])
-  return resposta[:100]
+                              train_Y[h:].reshape(-1, 1)), axis=1)
+  respostas = [[f"sum({x.item() + y.item()})"] for x, y in labels]
+  print("Os fatos observados: ", respostas)
+  return respostas
 #end.
 
 % Data of the first digit.
@@ -79,11 +91,11 @@ input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 % and a learning rate of 0.001.
 ?::digit(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
 % The sum.
-sum(Z) :- digit(0, X), digit(1, Y), Z = X+Y.
-
+%sum(Z) :- digit(0, X), digit(1, Y), Z = X+Y.
+sum(Z) :- digit(0, X), Z = X+5.
 % Learn the parameters of the program from the "sum(X)" atoms.
-#learn @mnist_labels_train, lr = 1., niters = 5, alg = "lagrange", batch = 500.
+#learn @mnist_labels_train, lr = 1., niters = 1, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
-#query sum(X).
+#query sum(0).
 
