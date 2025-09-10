@@ -24,16 +24,17 @@ class MNISTNet(nn.Module):
       print(">>O texto que chegou foi: ", d[:20])
     output1 = self.rede(input_ids=x)
     resposta = F.softmax(output1.logits, dim=1)
-    print("Logits do BERT: ", resposta)
+    #print("Logits do BERT: ", resposta)
     return resposta
 
 def digit_net_1(): return MNISTNet("igorcs/Syntax-A", numero_labels=5)
 def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4)
 
 # Retrieve the MNIST data.
-def mnist_data():
-  train = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['train']
-  test  = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem", trust_remote_code=True)['test']
+def mnist_data(): 
+  ds = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem")
+  train = ds['train']
+  test  = ds['test']
   return train, test
 
 def normalize(train, test):
@@ -52,56 +53,64 @@ def normalize(train, test):
   print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
   return lista_train, respostas_train, lista_train, respostas_train
 
-train, test = mnist_data()
-train_X, train_Y, test_X, test_Y = normalize(train, test)
+def gerar_dataset():
+  train, test = mnist_data()
+  train_X, train_Y, test_X, test_Y = normalize(train, test)
+  return train_X, train_Y, test_X, test_Y
 
 # MNIST images for the train set.
-def mnist_images_train(i): return train_X
+def mnist_images_train(i):
+  print("Vou gerar um dataset no Train")
+  t_X, t_Y, _, _ = gerar_dataset()
+  return t_X
 # MNIST images for the test set.
-def mnist_images_test(i): return train_X
+def mnist_images_test(i):
+  print(">>Vou gerar um dataset porque estou no Teste")
+  return mnist_images_train(i)
 
 # Observed atoms for training.
 def mnist_labels_train():
   # We join the two halves (top and bottom) of MNIST and join them together to get
   # two digits side by side. The labels are atoms encoding the sum of the two digits.
-  labels = train_Y
-  resposta = [[f"nota({y})"] for y in labels]
-  #resposta = [f"nota({y})" for y in labels]
+  
+  _, labels, _, _ = gerar_dataset()
+  resposta = [[f"grade({y})"] for y in labels]
+  #resposta = [f"grade({y})" for y in labels]
   print("No mnist_labels_train: ", resposta)
   return resposta
 #end.
 
 % Data of the first digit.
 input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
+input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
-% Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
+% Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
 ?::syntax(X, {0,1,2,3,4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
 ?::mistakes(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
-?::redondo(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
 % The sum
-nota(0) :- syntax(0,0).
-nota(1) :- syntax(0,1), mistakes(0,0).
-%dois casos de nota 2
-nota(2) :- syntax(0,1), mistakes(0,B), B>=1.
-nota(2) :- syntax(0,A), mistakes(0,0), A>=2.
-%dois casos de nota 3
-nota(3) :- syntax(0,2), mistakes(0,B), B>=1.
-nota(3) :- syntax(0,A), mistakes(0,1), A>=2.
-%dois casos de nota 4
-nota(4) :- syntax(0,3), mistakes(0,B), B>=2.
-nota(4) :- syntax(0,A), mistakes(0,2), A>=3.
-%caso unico pra nota 5
-nota(5) :- syntax(0,4), mistakes(0,3).
+grade(0) :- syntax(0,0).
+grade(1) :- syntax(0,1), mistakes(1,0).
+%dois casos de grade 2
+grade(2) :- syntax(0,1), mistakes(1,B), B>=1.
+grade(2) :- syntax(0,A), mistakes(1,0), A>=2.
+%dois casos de grade 3
+grade(3) :- syntax(0,2), mistakes(1,B), B>=1.
+grade(3) :- syntax(0,A), mistakes(1,1), A>=2.
+%dois casos de grade 4
+grade(4) :- syntax(0,3), mistakes(1,B), B>=2.
+grade(4) :- syntax(0,A), mistakes(1,2), A>=3.
+%caso unico pra grade 5
+grade(5) :- syntax(0,4), mistakes(1,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
 #learn @mnist_labels_train, lr = 0.1, niters = 1, alg = "lagrange", batch = 1.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
-%#query nota(X).
-#query nota(0). 
-#query nota(1).
-#query nota(2).
-#query nota(3).
-#query nota(4).
-#query nota(5).
+%#query grade(X).
+#query grade(0). 
+#query grade(1).
+#query grade(2).
+#query grade(3).
+#query grade(4).
+#query grade(5).
