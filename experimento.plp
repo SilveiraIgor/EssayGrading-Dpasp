@@ -82,7 +82,7 @@ def mnist_labels_train():
 
 % Data of the first digit.
 input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
-input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
+%input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
@@ -90,18 +90,18 @@ input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 ?::mistakes(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
 % The sum
 grade(0) :- syntax(0,0).
-grade(1) :- syntax(0,1), mistakes(1,0).
+grade(1) :- syntax(0,1), mistakes(0,0).
 %dois casos de grade 2
-grade(2) :- syntax(0,1), mistakes(1,B), B>=1.
-grade(2) :- syntax(0,A), mistakes(1,0), A>=2.
+grade(2) :- syntax(0,1), mistakes(0,B), B>=1.
+grade(2) :- syntax(0,A), mistakes(0,0), A>=2.
 %dois casos de grade 3
-grade(3) :- syntax(0,2), mistakes(1,B), B>=1.
-grade(3) :- syntax(0,A), mistakes(1,1), A>=2.
+grade(3) :- syntax(0,2), mistakes(0,B), B>=1.
+grade(3) :- syntax(0,A), mistakes(0,1), A>=2.
 %dois casos de grade 4
-grade(4) :- syntax(0,3), mistakes(1,B), B>=2.
-grade(4) :- syntax(0,A), mistakes(1,2), A>=3.
+grade(4) :- syntax(0,3), mistakes(0,B), B>=2.
+grade(4) :- syntax(0,A), mistakes(0,2), A>=3.
 %caso unico pra grade 5
-grade(5) :- syntax(0,4), mistakes(1,3).
+grade(5) :- syntax(0,4), mistakes(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
 #learn @mnist_labels_train, lr = 0.1, niters = 1, alg = "lagrange", batch = 1.

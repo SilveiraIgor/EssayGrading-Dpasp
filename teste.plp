@@ -85,14 +85,16 @@ def mnist_labels_train():
 % Data of the first digit.
 input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 % Data of the second digit.
-input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
+%input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
+%input(2) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
+?::digit1(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
+?::digit2(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
 % The sum.
-%sum(Z) :- digit(0, X), digit(1, Y), Z = X+Y.
-sum(Z) :- digit(0, X), Z = X+5.
+%sum(Z) :- digit(0, X), digit(0, Y), Z = X+Y.
+sum(Z) :- digit1(0, X), digit2(0, Y), Z = X+Y.
 % Learn the parameters of the program from the "sum(X)" atoms.
 #learn @mnist_labels_train, lr = 1., niters = 1, alg = "lagrange", batch = 4.
 #semantics maxent.
