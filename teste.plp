@@ -29,11 +29,12 @@ class Net(torch.nn.Module):
     x = self.encoder(x)
     x = x.view(-1, 16 * 4 * 4)
     x = self.classifier(x)
-    print("Formato da resposta da rede: ", x.shape, x.ndim)
+    print("Formato da resposta da rede: ", x.shape, x.ndim, x.dtype)
     return x
 
 # Return an instance of Net.
-def digit_net(): return Net()
+def digit_net_1(): return Net()
+def digit_net_2(): return Net()
 
 # Retrieve the MNIST data.
 def mnist_data():
@@ -61,14 +62,16 @@ def pick_slice(data, which):
   return slice(h, len(data)) if which else slice(0, h)
 # MNIST images for the train set.
 def mnist_images_train(which):
-  resposta =  train_X[pick_slice(train_X, which)]
+  #resposta =  train_X[pick_slice(train_X, which)]
+  resposta =  train_X
   print("No mnist_images_train, o tensor tem formato: ", resposta.shape)
   #print(resposta[0][:10])
   #print(resposta[1][:10])
   return resposta
 # MNIST images for the test set.
 def mnist_images_test(which):
-  resposta = test_X[pick_slice(test_X, which)]
+  #resposta = test_X[pick_slice(test_X, which)]
+  resposta = test_X
   print("No mnist_images_test, o tensor tem tamanho: ", resposta.shape) 
   return resposta
 # Observed atoms for training.
@@ -77,7 +80,8 @@ def mnist_labels_train():
   # two digits side by side. The labels are atoms encoding the sum of the two digits.
   labels = torch.concatenate((train_Y[:(h := len(train_Y)//2)].reshape(-1, 1),
                               train_Y[h:].reshape(-1, 1)), axis=1)
-  respostas = [[f"sum({x.item() + y.item()})"] for x, y in labels]
+  #respostas = [[f"sum({x.item() + y.item()})"] for x, y in labels]
+  respostas = [[f"sum({x.item()*2})"] for x in train_Y]
   print("Os fatos observados: ", respostas)
   return respostas
 #end.
@@ -86,17 +90,16 @@ def mnist_labels_train():
 input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 % Data of the second digit.
 %input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
-%input(2) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit1(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
-?::digit2(X, {0..9}) as @digit_net with optim = "Adam", lr = 0.001 :- input(X).
+?::digit1(X, {0..9}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit2(X, {0..9}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
 % The sum.
 %sum(Z) :- digit(0, X), digit(0, Y), Z = X+Y.
 sum(Z) :- digit1(0, X), digit2(0, Y), Z = X+Y.
 % Learn the parameters of the program from the "sum(X)" atoms.
-#learn @mnist_labels_train, lr = 1., niters = 1, alg = "lagrange", batch = 4.
+%#learn @mnist_labels_train, lr = 1., niters = 1, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query sum(0).
