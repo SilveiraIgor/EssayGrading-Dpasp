@@ -4,8 +4,10 @@ import torchvision
 
 # Digit classification network definition.
 class Net(torch.nn.Module):
-  def __init__(self):
+  def __init__(self, tamanho):
     super().__init__()
+    self.tamanho = tamanho
+    print("Criando uma rede de tamanho ", self.tamanho)
     self.encoder = torch.nn.Sequential(
       torch.nn.Conv2d(1, 6, 5),
       torch.nn.MaxPool2d(2, 2),
@@ -17,9 +19,9 @@ class Net(torch.nn.Module):
     self.classifier = torch.nn.Sequential(
       torch.nn.Linear(16 * 4 * 4, 120),
       torch.nn.ReLU(),
-      torch.nn.Linear(120, 84),
-      torch.nn.ReLU(),
-      torch.nn.Linear(84, 10),
+      torch.nn.Linear(120, self.tamanho),
+      #torch.nn.ReLU(),
+      #torch.nn.Linear(84, self.tamanho),
       torch.nn.Softmax(1)
     )
 
@@ -32,9 +34,39 @@ class Net(torch.nn.Module):
     print("Formato da resposta da rede: ", x.shape, x.ndim, x.dtype)
     return x
 
+class Net2(torch.nn.Module):
+  def __init__(self, tamanho):
+    super().__init__()
+    self.tamanho = tamanho
+    print("Criando uma rede de tamanho ", self.tamanho)
+    self.encoder = torch.nn.Sequential(
+      torch.nn.Conv2d(1, 6, 5),
+      torch.nn.MaxPool2d(2, 2),
+      torch.nn.ReLU(True),
+      torch.nn.Conv2d(6, 16, 5),
+      torch.nn.MaxPool2d(2, 2),
+      torch.nn.ReLU(True)
+    )
+    self.classifier = torch.nn.Sequential(
+      torch.nn.Linear(16 * 4 * 4, 120),
+      torch.nn.ReLU(),
+      torch.nn.Linear(120, self.tamanho),
+      #torch.nn.ReLU(),
+      #torch.nn.Linear(84, self.tamanho),
+      torch.nn.Softmax(1)
+    )
+
+  def forward(self, x):
+    print("Formato que a rede recebeu: ", x.shape, x.ndim)
+    #print("Os dois primeiros elementos: ", x[:2][:10])
+    x = self.encoder(x)
+    x = x.view(-1, 16 * 4 * 4)
+    x = self.classifier(x)
+    print("Formato da resposta da rede: ", x.shape, x.ndim, x.dtype)
+    return x
 # Return an instance of Net.
-def digit_net_1(): return Net()
-def digit_net_2(): return Net()
+def digit_net_1(): return Net(10)
+def digit_net_2(): return Net2(10)
 
 # Retrieve the MNIST data.
 def mnist_data():
@@ -81,7 +113,13 @@ def mnist_labels_train():
   labels = torch.concatenate((train_Y[:(h := len(train_Y)//2)].reshape(-1, 1),
                               train_Y[h:].reshape(-1, 1)), axis=1)
   #respostas = [[f"sum({x.item() + y.item()})"] for x, y in labels]
-  respostas = [[f"sum({x.item()*2})"] for x in train_Y]
+  respostas = []
+  for x in train_Y:
+     if x.item() >= 4:
+       respostas.append([f"sum(4)"])
+     else:
+       respostas.append([f"sum({x.item()})"])
+  #respostas = [[f"sum({x.item()*2})"] for x in train_Y]
   print("Os fatos observados: ", respostas)
   return respostas
 #end.
@@ -93,14 +131,20 @@ input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 
 % Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit1(X, {0..9}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
 ?::digit2(X, {0..9}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit1(X, {0..9}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+
 % The sum.
 %sum(Z) :- digit(0, X), digit(0, Y), Z = X+Y.
 sum(Z) :- digit1(0, X), digit2(0, Y), Z = X+Y.
 % Learn the parameters of the program from the "sum(X)" atoms.
-%#learn @mnist_labels_train, lr = 1., niters = 1, alg = "lagrange", batch = 4.
+#learn @mnist_labels_train, lr = 1., niters = 5, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query sum(0).
+#query sum(1).
+#query sum(2).
+#query sum(3).
+#query sum(4).
+#query sum(5).
 

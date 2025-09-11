@@ -96,9 +96,9 @@ input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 
 % Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
-%0.1010::digit1(0,0); 0.0890::digit1(0,1); 0.2372::digit1(0,2); 0.3723::digit1(0,3); 0.2005::digit1(0,4).
 ?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
+%0.1010::digit1(0,0); 0.0890::digit1(0,1); 0.2372::digit1(0,2); 0.3723::digit1(0,3); 0.2005::digit1(0,4).
+?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
 %0.1975::digit2(0,0); 0.2011::digit2(0,1); 0.3998::digit2(0,2); 0.2016::digit2(0,3).
 % The sum
 grade(0) :- digit1(0,0).
@@ -116,7 +116,7 @@ grade(4) :- digit1(0,A), digit2(0,2), A>=3, A<=4.
 grade(5) :- digit1(0,4), digit2(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
-%#learn @mnist_labels_train, lr = 0.1, niters = 1, alg = "lagrange", batch = 1.
+#learn @mnist_labels_train, lr = 0.1, niters = 5, alg = "lagrange", batch = 1.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query grade(0). 
