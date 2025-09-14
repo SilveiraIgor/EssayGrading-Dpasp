@@ -65,8 +65,8 @@ class Net2(torch.nn.Module):
     print("Formato da resposta da rede: ", x.shape, x.ndim, x.dtype)
     return x
 # Return an instance of Net.
-def digit_net_1(): return Net(10)
-def digit_net_2(): return Net2(10)
+def digit_net_1(): return Net(4)
+def digit_net_2(): return Net2(5)
 
 # Retrieve the MNIST data.
 def mnist_data():
@@ -131,8 +131,8 @@ input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 
 % Neural annotated disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit2(X, {0..9}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
-?::digit1(X, {0..9}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit2(X, {0..3}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit1(X, {0..4}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
 
 % The sum.
 %sum(Z) :- digit(0, X), digit(0, Y), Z = X+Y.
@@ -146,5 +146,3 @@ sum(Z) :- digit1(0, X), digit2(0, Y), Z = X+Y.
 #query sum(2).
 #query sum(3).
 #query sum(4).
-#query sum(5).
-

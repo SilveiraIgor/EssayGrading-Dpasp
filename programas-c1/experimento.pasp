@@ -54,14 +54,14 @@ def normalize(train, test):
   for linha in test:
     respostas_test.append(linha['grades'][0]//40)
   lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
-  lista_test = tokenizer(test[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+  lista_test = tokenizer(test[:]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   #print(lista_train['input_ids'])
   #print(lista_train['input_ids'].dtype, lista_train['token_type_ids'].dtype, lista_train['attention_mask'].dtype)
   lista_train = torch.stack([lista_train['input_ids'], lista_train['token_type_ids'], lista_train['attention_mask']], dim=1)
   lista_test = torch.stack([lista_test['input_ids'], lista_test['token_type_ids'], lista_test['attention_mask']], dim=1)
   #print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
   respostas_train = torch.tensor(respostas_train[:2], dtype=torch.int)
-  respostas_test = torch.tensor(respostas_test[:2], dtype=torch.int)
+  respostas_test = torch.tensor(respostas_test[:], dtype=torch.int)
   #print("As respostas deveriam ser: ", respostas_train)
   #print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
   return lista_train, respostas_train, lista_test, respostas_test

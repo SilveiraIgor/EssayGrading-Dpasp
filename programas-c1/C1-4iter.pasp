@@ -120,7 +120,7 @@ grade(4) :- digit1(0,A), digit2(0,2), A>=3.
 grade(5) :- digit1(0,4), digit2(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
-%#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
+#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query grade(0). 

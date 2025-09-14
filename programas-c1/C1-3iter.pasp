@@ -53,36 +53,36 @@ def normalize(train, test):
     respostas_train.append(linha['grades'][0]//40)
   for linha in test:
     respostas_test.append(linha['grades'][0]//40)
-  lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
-  lista_test = tokenizer(test[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+  lista_train = tokenizer(train[:]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+  lista_test = tokenizer(test[:]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   #print(lista_train['input_ids'])
   #print(lista_train['input_ids'].dtype, lista_train['token_type_ids'].dtype, lista_train['attention_mask'].dtype)
   lista_train = torch.stack([lista_train['input_ids'], lista_train['token_type_ids'], lista_train['attention_mask']], dim=1)
   lista_test = torch.stack([lista_test['input_ids'], lista_test['token_type_ids'], lista_test['attention_mask']], dim=1)
   #print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
-  respostas_train = torch.tensor(respostas_train[:2], dtype=torch.int)
-  respostas_test = torch.tensor(respostas_test[:2], dtype=torch.int)
+  respostas_train = torch.tensor(respostas_train[:], dtype=torch.int)
+  respostas_test = torch.tensor(respostas_test[:], dtype=torch.int)
   #print("As respostas deveriam ser: ", respostas_train)
   #print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
   return lista_train, respostas_train, lista_test, respostas_test
 
 train, test = mnist_data()
 train_X, train_Y, test_X, test_Y = normalize(train, test)
-print("Shape do train_X: ", train_X.shape)
-print("Shape do train_Y: ", train_Y.shape)
-print("Shape do test_X: ", test_X.shape)
-print("Shape do test_Y: ", test_Y.shape)
+#print("Shape do train_X: ", train_X.shape)
+#print("Shape do train_Y: ", train_Y.shape)
+#print("Shape do test_X: ", test_X.shape)
+#print("Shape do test_Y: ", test_Y.shape)
 #return train_X, train_Y, test_X, test_Y
 
 # MNIST images for the train set.
 def mnist_images_train(i):
   t_X, t_Y, te_X, te_Y = train_X, train_Y, test_X, test_Y
-  print("No mnist_images_train, os tensores tem tamanho: ", t_X.shape)
+  #print("No mnist_images_train, os tensores tem tamanho: ", t_X.shape)
   return t_X #.to("cuda")
 # MNIST images for the test set.
 def mnist_images_test(i):
   t_X, t_Y, te_X, te_Y = train_X, train_Y, test_X, test_Y
-  print("No mnist_images_test, os tensores tem tamanho: ", te_X.shape)
+  #print("No mnist_images_test, os tensores tem tamanho: ", te_X.shape)
   return te_X #.to("cuda")
 
 # Observed atoms for training.
@@ -102,8 +102,8 @@ input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
-?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.00001 :- input(X).
+?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.00001 :- input(X).
 % The sum
 grade(0) :- digit1(0,0).
 grade(1) :- digit1(0,1), digit2(0,0).
@@ -120,7 +120,7 @@ grade(4) :- digit1(0,A), digit2(0,2), A>=3.
 grade(5) :- digit1(0,4), digit2(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
-%#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
+#learn @mnist_labels_train, lr = 1., niters = 3, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query grade(0). 

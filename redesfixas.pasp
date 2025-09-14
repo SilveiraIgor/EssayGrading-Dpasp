@@ -6,8 +6,9 @@ import torch.nn.functional as F
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 class MNISTNet(nn.Module):
-  def __init__(self, name, numero_labels):
+  def __init__(self, name, numero_labels, exibir):
     super(MNISTNet, self).__init__()
+    self.exibir = exibir
     self.rede = AutoModelForSequenceClassification.from_pretrained(
                 name,
                 cache_dir="/tmp/aes_enem2",
@@ -18,17 +19,18 @@ class MNISTNet(nn.Module):
     x = x.long()
     #entrada = self.tokenizer(x, return_tensors="pt", truncation=True, padding="max_length", max_length=512)
     #output1 = self.rede(input_ids=entrada[0], token_type_ids=entrada[1],  attention_mask=entrada[2])
-    print("Vou printar o formato do vetor que chegou no forward bert: ", x.shape, x.dtype)
+    print(f"Formato que chegou no {self.exibir}: ", x.shape, x.dtype)
     decodado = self.tokenizer.batch_decode(x, skip_special_tokens=True)
     for d in decodado:
       print(">>O texto que chegou foi: ", d[:20])
     output1 = self.rede(input_ids=x)
     resposta = F.softmax(output1.logits, dim=1)
     print("Logits do BERT: ", resposta)
+    print(f"Formato da resposta do {self.exibir}: ", resposta.shape, resposta.dtype)
     return resposta
 
-def digit_net_1(): return MNISTNet("igorcs/Syntax-A", numero_labels=5)
-def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4)
+def digit_net_1(): return MNISTNet("igorcs/Syntax-A", numero_labels=5, exibir="Syntaxe")
+def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4, exibir="Mistakes")
 
 # Retrieve the MNIST data.
 def mnist_data(): 
@@ -40,40 +42,48 @@ def mnist_data():
 def normalize(train, test):
   TOKENIZER_NAME = f"neuralmind/bert-base-portuguese-cased"
   tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME)
-  lista_train = []
-  respostas_train = []
+  lista_train, lista_test = [], []
+  respostas_train, respostas_test = [], []
   for linha in train:
     respostas_train.append(linha['grades'][0]//40)
-  lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)#train['essay_text']
+  for linha in test:
+    respostas_test.append(linha['grades'][0]//40)
+  lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+  lista_test = tokenizer(test[:4]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   #print(lista_train['input_ids'])
   lista_train = lista_train['input_ids']
-  print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
+  lista_test = lista_test['input_ids']
+  #print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
   respostas_train = torch.tensor(respostas_train[:2], dtype=torch.int)
-  print("As respostas deveriam ser: ", respostas_train)
-  print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
-  return lista_train, respostas_train, lista_train, respostas_train
+  respostas_test = torch.tensor(respostas_test[:4], dtype=torch.int)
+  #print("As respostas deveriam ser: ", respostas_train)
+  #print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
+  return lista_train, respostas_train, lista_test, respostas_test
 
-def gerar_dataset():
-  train, test = mnist_data()
-  train_X, train_Y, test_X, test_Y = normalize(train, test)
-  return train_X, train_Y, test_X, test_Y
+train, test = mnist_data()
+train_X, train_Y, test_X, test_Y = normalize(train, test)
+print("Shape do train_X: ", train_X.shape)
+print("Shape do train_Y: ", train_Y.shape)
+print("Shape do test_X: ", test_X.shape)
+print("Shape do test_Y: ", test_Y.shape)
+#return train_X, train_Y, test_X, test_Y
 
 # MNIST images for the train set.
 def mnist_images_train(i):
-  print("Vou gerar um dataset no Train")
-  t_X, t_Y, _, _ = gerar_dataset()
+  t_X, t_Y, te_X, te_Y = train_X, train_Y, test_X, test_Y #gerar_dataset()
+  print("No mnist_images_train, o tensor tem tamanho: ", t_X.shape)
   return t_X
 # MNIST images for the test set.
 def mnist_images_test(i):
-  print(">>Vou gerar um dataset porque estou no Teste")
-  return mnist_images_train(i)
+  t_X, t_Y, te_X, te_Y = train_X, train_Y, test_X, test_Y
+  print("No mnist_images_test, o tensor tem tamanho: ", te_X.shape)
+  return te_X
 
 # Observed atoms for training.
 def mnist_labels_train():
   # We join the two halves (top and bottom) of MNIST and join them together to get
   # two digits side by side. The labels are atoms encoding the sum of the two digits.
-  
-  _, labels, _, _ = gerar_dataset()
+  labels = train_Y
   resposta = [[f"grade({y})"] for y in labels]
   #resposta = [f"grade({y})" for y in labels]
   print("No mnist_labels_train: ", resposta)
@@ -81,27 +91,33 @@ def mnist_labels_train():
 #end.
 
 % Data of the first digit.
-input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
+%input(0) ~ test(@mnist_images_test(0)), train(@mnist_images_train(0)).
 %input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit1(X, {0,1,2,3,4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+%?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
 %0.1010::digit1(0,0); 0.0890::digit1(0,1); 0.2372::digit1(0,2); 0.3723::digit1(0,3); 0.2005::digit1(0,4).
-?::digit2(X, {0,1,2,3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
+%?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
 %0.1975::digit2(0,0); 0.2011::digit2(0,1); 0.3998::digit2(0,2); 0.2016::digit2(0,3).
+%probs para exemplo1
+0.0372::digit2(0,0); 0.1704::digit2(0,1); 0.6985::digit2(0,2); 0.0939::digit2(0,3).
+0.0290::digit1(0,0); 0.0324::digit1(0,1); 0.3536::digit1(0,2); 0.4180::digit1(0,3); 0.1670::digit1(0,4).
+%probs para exemplo2
+%0.0370::digit2(0,0); 0.1147::digit2(0,1); 0.7677::digit2(0,2); 0.0806::digit2(0,3).
+%0.0280::digit1(0,0); 0.0260::digit1(0,1); 0.3486::digit1(0,2); 0.3530::digit1(0,3); 0.2446::digit1(0,4).
 % The sum
 grade(0) :- digit1(0,0).
 grade(1) :- digit1(0,1), digit2(0,0).
 %dois casos de grade 2
 grade(2) :- digit1(0,1), digit2(0,B), B>=1, B<=3.
-grade(2) :- digit1(0,A), digit2(0,0), A>=2, A<=5.
+grade(2) :- digit1(0,A), digit2(0,0), A>=2, A<=4.
 %dois casos de grade 3
-grade(3) :- digit1(0,2), digit2(0,B), B>=1.
-grade(3) :- digit1(0,A), digit2(0,1), A>=2.
+grade(3) :- digit1(0,2), digit2(0,B), B>=1, B<=3.
+grade(3) :- digit1(0,A), digit2(0,1), A>=2, A<=4.
 %dois casos de grade 4
-grade(4) :- digit1(0,3), digit2(0,B), B>=2.
-grade(4) :- digit1(0,A), digit2(0,2), A>=3.
+grade(4) :- digit1(0,3), digit2(0,B), B>=2, B<=3.
+grade(4) :- digit1(0,A), digit2(0,2), A>=3, A<=4.
 %caso unico pra grade 5
 grade(5) :- digit1(0,4), digit2(0,3).
 
@@ -109,7 +125,6 @@ grade(5) :- digit1(0,4), digit2(0,3).
 %#learn @mnist_labels_train, lr = 0.1, niters = 1, alg = "lagrange", batch = 1.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
-%#query grade(X).
 #query grade(0). 
 #query grade(1).
 #query grade(2).
