@@ -20,10 +20,10 @@ class MNISTNet(nn.Module):
     x = x.long()
     y = y.long()
     z = z.long()
-    print(f"Formato que chegou no {self.exibir}: ", x.shape, x.dtype)
-    decodado = self.tokenizer.batch_decode(x, skip_special_tokens=True)
-    for d in decodado:
-      print(">>O texto que chegou foi: ", d[:20])
+    #print(f"Formato que chegou no {self.exibir}: ", x.shape, x.dtype)
+    #decodado = self.tokenizer.batch_decode(x, skip_special_tokens=True)
+    #for d in decodado:
+      #print(">>O texto que chegou foi: ", d[:20])
     #print("Devices: ", x.device, y.device, z.device, self.rede.device)
     output1 = self.rede(input_ids=x, token_type_ids=y, attention_mask=z)
     resposta = F.softmax(output1.logits, dim=1)
@@ -38,8 +38,9 @@ def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4, exibir=
 # Retrieve the MNIST data.
 def mnist_data(): 
   ds = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem")
+  ds2 = load_dataset("igorcs/C1-A", cache_dir="/tmp/outro_dataset")
   train = ds['train']
-  test  = ds['test']
+  test  = ds2['test']
   return train, test
 
 def normalize(train, test):
@@ -50,16 +51,16 @@ def normalize(train, test):
   for linha in train:
     respostas_train.append(linha['grades'][0]//40)
   for linha in test:
-    respostas_test.append(linha['grades'][0]//40)
-  lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
-  lista_test = tokenizer(test[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+    respostas_test.append(eval(linha['grades'])[0]//40)
+  lista_train = tokenizer(train[:]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
+  lista_test = tokenizer(test[:]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   #print(lista_train['input_ids'])
   #print(lista_train['input_ids'].dtype, lista_train['token_type_ids'].dtype, lista_train['attention_mask'].dtype)
   lista_train = torch.stack([lista_train['input_ids'], lista_train['token_type_ids'], lista_train['attention_mask']], dim=1)
   lista_test = torch.stack([lista_test['input_ids'], lista_test['token_type_ids'], lista_test['attention_mask']], dim=1)
   #print("Sobre o lista_train: ", lista_train.shape, lista_train.ndim, lista_train.dtype)
-  respostas_train = torch.tensor(respostas_train[:2], dtype=torch.int)
-  respostas_test = torch.tensor(respostas_test[:2], dtype=torch.int)
+  respostas_train = torch.tensor(respostas_train[:], dtype=torch.int)
+  respostas_test = torch.tensor(respostas_test[:], dtype=torch.int)
   #print("As respostas deveriam ser: ", respostas_train)
   #print("Sobre o respostas: ", respostas_train.shape, respostas_train.ndim, respostas_train.dtype)
   return lista_train, respostas_train, lista_test, respostas_test
@@ -100,8 +101,8 @@ input(1) ~ test(@mnist_images_test(1)), train(@mnist_images_train(1)).
 
 % Neural angradeted disjunction over each digit from 0 to 9; use Adam as optimizer
 % and a learning rate of 0.001.
-?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.001 :- input(X).
-?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.001 :- input(X).
+?::digit2(X, {0..3}) as @digit_net_2 with optim = "Adam", lr = 0.00001 :- input(X).
+?::digit1(X, {0..4}) as @digit_net_1 with optim = "Adam", lr = 0.00001 :- input(X).
 % The sum
 grade(0) :- digit1(0,0).
 grade(1) :- digit1(0,1), digit2(0,0).
@@ -118,7 +119,7 @@ grade(4) :- digit1(0,A), digit2(0,2), A>=3.
 grade(5) :- digit1(0,4), digit2(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
-#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
+#learn @mnist_labels_train, lr = 1., niters = 10, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query grade(0). 

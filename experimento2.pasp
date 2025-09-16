@@ -38,8 +38,9 @@ def digit_net_2(): return MNISTNet("igorcs/Mistakes-A", numero_labels=4, exibir=
 # Retrieve the MNIST data.
 def mnist_data(): 
   ds = load_dataset("kamel-usp/aes_enem_dataset", "JBCS2025", cache_dir="/tmp/aes_enem")
+  ds2 = load_dataset("igorcs/C1-A", cache_dir="/tmp/outro_dataset")
   train = ds['train']
-  test  = ds['test']
+  test  = ds2['test']
   return train, test
 
 def normalize(train, test):
@@ -50,7 +51,7 @@ def normalize(train, test):
   for linha in train:
     respostas_train.append(linha['grades'][0]//40)
   for linha in test:
-    respostas_test.append(linha['grades'][0]//40)
+    respostas_test.append(eval(linha['grades'])[0]//40)
   lista_train = tokenizer(train[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   lista_test = tokenizer(test[:2]['essay_text'], return_tensors="pt", truncation=True, padding='max_length', max_length=512)
   #print(lista_train['input_ids'])
@@ -118,7 +119,7 @@ grade(4) :- digit1(0,A), digit2(0,2), A>=3.
 grade(5) :- digit1(0,4), digit2(0,3).
 
 % Learn the parameters of the program from the "sum(X)" atoms.
-#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
+%#learn @mnist_labels_train, lr = 1., niters = 2, alg = "lagrange", batch = 4.
 #semantics maxent.
 % Ask for the probability of all groundings of sum(X).
 #query grade(0). 
